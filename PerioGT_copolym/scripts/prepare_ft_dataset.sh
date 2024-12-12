@@ -3,7 +3,7 @@
 CONFIG="base"
 DATASET="demo"
 
-python process_ft_dataset.py \
+python prepare_ft_dataset.py \
     --dataset $DATASET \
     --device cuda \
     --config $CONFIG \

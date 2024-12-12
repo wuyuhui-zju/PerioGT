@@ -14,3 +14,4 @@ CUDA_VISIBLE_DEVICES=0,1,2 python -u -m torch.distributed.run \
     --backbone $BACKBONE \
     --n_steps 100000 \
     --data_path ../datasets/pretrain/
+

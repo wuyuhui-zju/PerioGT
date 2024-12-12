@@ -1,7 +1,7 @@
 """
 The implementation of LiGhT refers to its original article and code
 "KPGT: Knowledge-Guided Pre-training of Graph Transformer or Molecular Property Prediction"
-by Han Li, arXiv, https://arxiv.org/abs/2206.03364
+by Han Li, KDD 2022, https://arxiv.org/abs/2206.03364
 """
 
 

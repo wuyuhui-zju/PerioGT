@@ -7,7 +7,7 @@ DATASET="egb"
 python evaluation.py \
     --config $CONFIG \
     --backbone $BACKBONE \
-    --model_path ../checkpoints/$DATASET/best_model_0.pth \
+    --model_path ../checkpoints/$DATASET/best_model.pth \
     --max_prompt 20 \
     --dataset $DATASET \
     --dropout 0 \

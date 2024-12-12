@@ -18,8 +18,6 @@ from trainer.finetune_trainer import Trainer
 from trainer.result_tracker import Result_Tracker
 from trainer.evaluator import Evaluator
 from utils.function import set_random_seed
-
-
 warnings.filterwarnings("ignore")
 
 
@@ -31,12 +29,12 @@ def seed_worker(worker_id):
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Arguments")
-    parser.add_argument("--seed", type=int, default=22)
+    parser.add_argument("--seed", type=int, default=44)
     parser.add_argument("--n_epochs", type=int, default=50)
 
     parser.add_argument("--config", type=str, required=True)
     parser.add_argument("--backbone", type=str, default="light")
-    parser.add_argument("--mode", type=str, required=True)
+    parser.add_argument("--mode", type=str, default="finetune")
     parser.add_argument("--model_path", type=str, default="../checkpoints/pretrained/light/base.pth")
     parser.add_argument("--max_prompt", type=int, default=20)
     parser.add_argument("--dataset", type=str, required=True)

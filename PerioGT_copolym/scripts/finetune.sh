@@ -9,5 +9,8 @@ python finetune.py \
     --dataset mar1 \
     --weight_decay 0 \
     --dropout 0 \
-    --lr 2e-4 \
+    --lr 1e-4 \
+    --save \
+    --save_suffix 0 \
     --device cuda:0
+

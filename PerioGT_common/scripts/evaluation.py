@@ -22,11 +22,11 @@ def parse_args():
     parser.add_argument("--backbone", type=str, default="light")
     parser.add_argument("--model_path", type=str, required=True)
     parser.add_argument("--max_prompt", type=int, default=20)
-    parser.add_argument("--dataset", type=str)
+    parser.add_argument("--dataset", type=str, required=True)
 
-    parser.add_argument("--dropout", type=float, required=True)
+    parser.add_argument("--dropout", type=float, default=0.)
     parser.add_argument("--n_threads", type=int, default=4)
-    parser.add_argument("--device", type=str, required=True)
+    parser.add_argument("--device", type=str, default="cuda")
     args = parser.parse_args()
     return args
 

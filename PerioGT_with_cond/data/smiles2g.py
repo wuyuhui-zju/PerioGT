@@ -51,47 +51,36 @@ atom_featurizer_all = ConcatFeaturizer([  # 137
 
 
 def smiles_to_prompt(base_smiles, model, scaler, device, max_length, n_virtual_nodes):
-    graphs, smiless = smiles_to_graph_node_emb(base_smiles, max_length, n_virtual_nodes)
+    graphs, smiless, smiless_n = smiles_to_graph_node_emb(base_smiles, max_length, n_virtual_nodes)
     base_graph = graphs[0]
-    polymer_smiless = []
-    error_idx = []
-    for i, smiles in enumerate(smiless):
-        try:
-            polymer_smiles = generate_oligomer_smiles(num_repeat_units=3, smiles=smiles)
-            polymer_smiless.append(polymer_smiles)
-        except Chem.rdchem.KekulizeException as e:
-            error_idx.append(i)
-            print(f"Can't kekulize mol: {smiles}")
-            print(f"Base smiles: {base_smiles}")
 
-    # delete error smiles
-    graphs = [graph for i, graph in enumerate(graphs) if i not in error_idx]
-    # print(len(polymer_smiless))
-    assert len(graphs) == len(polymer_smiless)
-
-    # fp
-    fp_list = []
-    for polymer_smiles in polymer_smiless:
-        mol = Chem.MolFromSmiles(polymer_smiles)
+    fp_with_n = []
+    des_with_n = []
+    calc = Calculator(descriptors, ignore_3D=True)
+    for i in [3, 6, 9]:
+        smiles = generate_oligomer_smiles(num_repeat_units=i, smiles=base_smiles)
+        mol = Chem.MolFromSmiles(smiles)
+        # fp
         maccs_fp = MACCSkeys.GenMACCSKeys(mol)
         ec_fp = AllChem.GetMorganFingerprintAsBitVect(mol, 4, nBits=1024)
-        fp_list.append(list(map(int, list(maccs_fp + ec_fp))))
-    fp_list = np.array(fp_list, dtype=np.float32)
-
-    # md
-    des_list = []
-    for polymer_smiles in polymer_smiless:
-        calc = Calculator(descriptors, ignore_3D=True)
-        mol = Chem.MolFromSmiles(polymer_smiles)
+        # md
         des = np.array(list(calc(mol).values()), dtype=np.float32)
-        des_list.append(des)
 
+        fp_with_n.append(list(map(int, list(maccs_fp + ec_fp))))
+        des_with_n.append(des)
+
+    fp_list = []
+    des_list = []
+    for n in smiless_n:
+        fp_list.append(fp_with_n[n - 1])
+        des_list.append(des_with_n[n - 1])
+
+    fp_list = np.array(fp_list, dtype=np.float32)
     des = np.array(des_list, dtype=np.float32)
     des = np.where(np.isnan(des), 0, des)
     des = np.where(des > 10 ** 12, 10 ** 12, des)
 
     # normalization
-
     des_norm = scaler.transform(des).astype(np.float32)
 
     graphs = dgl.batch(graphs).to(device)
@@ -117,7 +106,6 @@ def smiles_to_prompt(base_smiles, model, scaler, device, max_length, n_virtual_n
         feat = BID_to_PROMPT_DICT[bid]
         feats[nid][:feat.size()[0], :] = feat[:20]
 
-    # base_graph.ndata["prompt"] = feats
     return feats
 
 
@@ -125,31 +113,35 @@ def smiles_to_graph_node_emb(smiles_base, max_length=5, n_virtual_nodes=2, add_s
     two_mer, query_dict = generate_idx_dict(smiles_base)
     graphs = []
     smiless = knowledge_augment_traverse(smiles_base)
-    ##########################################
+
     processed_smiless = []
+    processed_smiless_nmrus = []
     for smiles in smiless:
         for i in range(1, 4):
-            processed_smiless.append(
-                generate_oligomer_smiles(num_repeat_units=i, smiles=smiles, replace_star_atom=False))
+            processed_smiless.append(generate_oligomer_smiles(num_repeat_units=i, smiles=smiles, replace_star_atom=False))
+            processed_smiless_nmrus.append(i)
 
-    def random_select(items, n):
+    def random_select(items, items_pair, n):
+        if len(items) != len(items_pair):
+            raise ValueError("len(items) must be same as len(items_pair)")
+
         if len(items) <= n:
-            return items
+            return items, items_pair
         else:
-            chosen = random.sample(items[1:], n - 1)
-            return [items[0]] + chosen
+            chosen_indices = random.sample(range(1, len(items)), n - 1)
+            chosen_items = [items[0]] + [items[i] for i in chosen_indices]
+            chosen_items_pair = [items_pair[0]] + [items_pair[i] for i in chosen_indices]
+            return chosen_items, chosen_items_pair
 
-    smiless = random_select(processed_smiless, 10)
-    ##########################################
+    smiless, smiless_nmrus = random_select(processed_smiless, processed_smiless_nmrus, 10)
+
     error_idx = []
     for i, ka in enumerate(smiless):
         try:
             if i == 0:
-                graphs.append(
-                    node_emb(ka, two_mer, query_dict, max_length, n_virtual_nodes, add_self_loop, is_base=True))
+                graphs.append(node_emb(ka, two_mer, query_dict, max_length, n_virtual_nodes, add_self_loop, is_base=True))
             else:
-                graphs.append(
-                    node_emb(ka, two_mer, query_dict, max_length, n_virtual_nodes, add_self_loop, is_base=False))
+                graphs.append(node_emb(ka, two_mer, query_dict, max_length, n_virtual_nodes, add_self_loop, is_base=False))
 
         except IndexError:
             error_idx.append(i)
@@ -158,10 +150,11 @@ def smiles_to_graph_node_emb(smiles_base, max_length=5, n_virtual_nodes=2, add_s
 
     # delete error smiles
     smiless = [smiles for i, smiles in enumerate(smiless) if i not in error_idx]
+    smiless_nmrus = [smiles_nmrus for i, smiles_nmrus in enumerate(smiless_nmrus) if i not in error_idx]
 
     assert len(graphs) == len(smiless)
 
-    return graphs, smiless
+    return graphs, smiless, smiless_nmrus
 
 
 def node_emb(smiles, two_mer, query_dict, max_length, n_virtual_nodes, add_self_loop, is_base):

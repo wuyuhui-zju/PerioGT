@@ -3,6 +3,7 @@ sys.path.append('..')
 
 import argparse
 import os
+import pickle
 import pandas as pd
 from dgl import save_graphs
 from mordred import Calculator, descriptors
@@ -64,15 +65,9 @@ def get_model(args):
 
 
 def preprocess_dataset(args):
-    model = get_model(args)
-    pretrain_des_path = os.path.join('../datasets/pretrain/', "polymer_descriptors.npz")
-    pretrain_des = np.load(pretrain_des_path)['md'].astype(np.float32)
-    pretrain_des = np.where(np.isnan(pretrain_des), 0, pretrain_des)
-    pretrain_des = np.where(pretrain_des > 10 ** 12, 10 ** 12, pretrain_des)
-    scaler = StandardScaler()
-    scaler.fit(pretrain_des)
+    with open("../datasets/pretrain/scaler_all.pkl", 'rb') as file:
+        scaler = pickle.load(file)
 
-    #############################################################################
     df = pd.read_csv(f"{args.data_path}/{args.dataset}/{args.dataset}.csv")
     cache_file_path = f"{args.data_path}/{args.dataset}/graphs.pkl"
     smiless_1 = df["B"].values.tolist()
@@ -98,6 +93,7 @@ def preprocess_dataset(args):
             continue
     task_names = ['value']
     print('constructing graphs')
+    model = get_model(args)
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
     graphs = []
     for smiles_lst in tqdm(monomer_list, total=len(monomer_list), ncols=100):

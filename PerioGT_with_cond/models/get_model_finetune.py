@@ -73,8 +73,9 @@ def get_model(args):
 
     model.triplet_emb = get_triplet_emb_layer(d_g_feats=config['d_g_feats'], d_fp_feats=1191, d_md_feats=1613, device=device)
     model.load_state_dict({k.replace('module.', ''): v for k, v in torch.load(f'{args.model_path}').items()})
-    for p in model.parameters():
-        p.requires_grad = False
+    if args.mode == "freeze":
+        for p in model.parameters():
+            p.requires_grad = False
     model.triplet_emb.gs_proj = get_gs_projector(d_input_feats=3, d_g_feats=config['d_g_feats'], n_layers=2, activation=nn.GELU(), device=device)
     model.predictor = get_predictor(dim_emb=config['d_g_feats'] * 4, n_tasks=1, n_layers=2, predictor_drop=args.dropout, device=device, d_hidden_feats=256)
     model.node_attn = get_node_attn(dim_emb=config['d_g_feats'], dropout=args.dropout, device=device)

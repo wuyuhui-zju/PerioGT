@@ -6,7 +6,7 @@ import os
 import pandas as pd
 from dgl import save_graphs
 from mordred import Calculator, descriptors
-from sklearn.preprocessing import StandardScaler
+import pickle
 import numpy as np
 from rdkit.Chem import MACCSkeys, AllChem
 from rdkit import Chem
@@ -82,12 +82,8 @@ def get_model(args):
 
 
 def prepare_dataset(args):
-    pretrain_des_path = os.path.join(f'{args.data_path}/pretrain/', "polymer_descriptors.npz")
-    pretrain_des = np.load(pretrain_des_path)['md'].astype(np.float32)
-    pretrain_des = np.where(np.isnan(pretrain_des), 0, pretrain_des)
-    pretrain_des = np.where(pretrain_des > 10 ** 12, 10 ** 12, pretrain_des)
-    scaler = StandardScaler()
-    scaler.fit(pretrain_des)
+    with open("../datasets/pretrain/scaler_all.pkl", 'rb') as file:
+        scaler = pickle.load(file)
 
     df = pd.read_csv(f"{args.data_path}/{args.dataset}/{args.dataset}.csv")
     cache_file_path = f"{args.data_path}/{args.dataset}/graphs.pkl"

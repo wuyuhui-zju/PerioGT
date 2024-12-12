@@ -57,7 +57,7 @@ def generate_oligomer_smiles(num_repeat_units, smiles, replace_star_atom=True):
     return Chem.MolToSmiles(final_mol)
 
 
-def periodicity_augment(smiles, max_mrus=3):
+def periodicity_augment(smiles, max_mrus=3, return_n=False):
     mol = Chem.MolFromSmiles(smiles)
     atom_p = []
     atom_pn = []
@@ -100,8 +100,10 @@ def periodicity_augment(smiles, max_mrus=3):
     num_repeat_units = np.random.choice(np.arange(1, max_mrus+1))
     aug_smiles = generate_oligomer_smiles(num_repeat_units=num_repeat_units, smiles=Chem.MolToSmiles(final_mol),
                                           replace_star_atom=False)
-
-    return aug_smiles
+    if return_n:
+        return aug_smiles, num_repeat_units
+    else:
+        return aug_smiles
 
 
 def knowledge_augment_traverse(smiles: str) -> List[str]:

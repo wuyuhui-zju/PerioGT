@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CONFIG="base"
-DATASET="demo"
+DATASET="opv"
 
 python prepare_ft_dataset.py \
     --dataset $DATASET \

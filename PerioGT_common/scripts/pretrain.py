@@ -3,16 +3,9 @@ sys.path.append('..')
 
 import argparse
 import torch
-from torch.utils.data import DataLoader
 from torch.optim import Adam
 from torch.nn import MSELoss, BCEWithLogitsLoss, CrossEntropyLoss
-from torch.utils.data.distributed import DistributedSampler
-import numpy as np
 import os
-import random
-from data.vocab import Vocab
-from data.smiles2g_light import N_BOND_TYPES, N_ATOM_TYPES
-from data.pretrain_dataset import PolymDataset
 
 from trainer.scheduler import PolynomialDecayLR
 from trainer.pretrain_trainer import Trainer
@@ -21,9 +14,8 @@ from trainer.result_tracker import Result_Tracker
 from utils.loss import DistributedNCELoss
 from utils.function import set_random_seed, load_config
 from models.get_model_pretrain import get_model
+from data.get_loader_pretrain import get_dataset
 import warnings
-
-
 warnings.filterwarnings("ignore")
 local_rank = int(os.environ['LOCAL_RANK'])
 
@@ -38,14 +30,9 @@ def parse_args():
     parser.add_argument("--backbone", type=str, default="light")
     parser.add_argument("--n_threads", type=int, default=8)
     parser.add_argument("--n_devices", type=int, default=1)
+    parser.add_argument("--ff", action='store_true')
     args = parser.parse_args()
     return args
-
-
-def seed_worker(worker_id):
-    worker_seed = torch.initial_seed() % 2**32
-    np.random.seed(worker_seed)
-    random.seed(worker_seed)
 
 
 if __name__ == '__main__':
@@ -57,18 +44,8 @@ if __name__ == '__main__':
     device = torch.device('cuda', local_rank)
     set_random_seed(args.seed)
     val_results, test_results, train_results = [], [], []
-    
-    vocab = Vocab(N_ATOM_TYPES, N_BOND_TYPES)
-    if args.backbone == "light":
-        from data.collator_light import CollatorPretrain
-        collator = CollatorPretrain(vocab, max_length=config['path_length'], n_virtual_nodes=2, candi_rate=config['candi_rate'], fp_disturb_rate=config['fp_disturb_rate'], md_disturb_rate=config['md_disturb_rate'], max_mrus=config['max_mrus'])
-    elif args.backbone == "graphgps":
-        from data.collator_graphgps import CollatorPretrain
-        collator = CollatorPretrain(vocab, n_virtual_nodes=2, candi_rate=config['candi_rate'], fp_disturb_rate=config['fp_disturb_rate'], md_disturb_rate=config['md_disturb_rate'])
 
-    train_dataset = PolymDataset(root_path=args.data_path)
-    train_loader = DataLoader(train_dataset, sampler=DistributedSampler(train_dataset), batch_size=config['batch_size']// args.n_devices, num_workers=args.n_threads, worker_init_fn=seed_worker, drop_last=True, collate_fn=collator)
-
+    train_dataset, train_loader = get_dataset(args, config)
     model = get_model(args, device)
     model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], output_device=local_rank, find_unused_parameters=True)
     optimizer = Adam(model.parameters(), lr=config['lr'], weight_decay=config['weight_decay'])

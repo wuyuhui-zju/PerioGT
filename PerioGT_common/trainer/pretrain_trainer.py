@@ -36,10 +36,10 @@ class Trainer():
             try:
                 self.optimizer.zero_grad()
                 mask_replace_keep, sl_predictions, sl_labels, fp_predictions, fps, disturbed_fps, md_predictions, mds, cl_projections = self._forward_epoch(model, batched_data)
-                sl_loss = self.sl_loss_fn(sl_predictions, sl_labels).mean()
-                fp_loss = self.clf_loss_fn(fp_predictions, fps).mean()
-                md_loss = self.reg_loss_fn(md_predictions, mds).mean()
-                cl_loss = self.nce_loss_fn(cl_projections, temperature=0.2, dist=True)
+                sl_loss = self.sl_loss_fn(sl_predictions, sl_labels).mean()  # reconstruction loss of PNs
+                fp_loss = self.clf_loss_fn(fp_predictions, fps).mean()  # reconstruction loss of binary features in VNs
+                md_loss = self.reg_loss_fn(md_predictions, mds).mean()  # reconstruction loss of numerical features in VNs
+                cl_loss = self.nce_loss_fn(cl_projections, temperature=0.2, dist=True)  # PA-based contrastive learning loss
                 loss = ((sl_loss + fp_loss + md_loss)/3) + cl_loss
 
                 loss.backward()
