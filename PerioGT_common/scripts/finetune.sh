@@ -2,7 +2,7 @@
 
 BACKBONE="light"
 CONFIG="base"
-DATASET="mt"
+DATASET="egc"
 
 python finetune.py \
     --config $CONFIG \
@@ -14,6 +14,4 @@ python finetune.py \
     --weight_decay 0 \
     --dropout 0 \
     --lr 5e-4 \
-    --device cuda:0 \
-    --save \
-    --save_suffix 0 \
+    --device cuda:0
