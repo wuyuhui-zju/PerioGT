@@ -2,7 +2,7 @@
 
 BACKBONE="light"
 CONFIG="base"
-DATASET="egb"
+DATASET="egc"
 
 python prepare_ft_dataset.py \
     --dataset $DATASET \
