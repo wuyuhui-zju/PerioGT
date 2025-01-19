@@ -23,7 +23,7 @@ Since the calculation of the properties of polymers is time-consuming, we prepar
 cd PerioGT_common/scripts
 bash prepare_pt_dataset.sh
 ```
-The processed files can be downloaded from link. Place the files downloaded from the `pretrain` directory into the `datasets` directory.
+The processed files can be downloaded from the Zenodo link given in the muniscript. Place the files downloaded from the `pretrain` directory into the `datasets` directory.
 ## Pre-training
 We provide a script to pre-train the base model (100M). Switch to the scripts directory.
 ```
@@ -44,7 +44,7 @@ After run the pre-training script or download the pre-trained weights, we fine-t
 ```
 bash prepare_ft_dataset.sh
 ```
-You can change the dataset by specifying the `--dataset` argument in the script. Notably, the computation process of prompts is time-consuming, and we provide the processed dataset at link. Or you can also use the version without prompt by specifying `--no_prompt` argument to save time, which in some cases also can get close to the results. Please place the downloaded `egc` file in the `datasets` directory. Finally, model can be fine-tuned by running:
+You can change the dataset by specifying the `--dataset` argument in the script. Notably, the computation process of prompts is time-consuming, and we provide the processed dataset at link. Please place the downloaded `egc` file in the `datasets` directory. Finally, model can be fine-tuned by running:
 ```
 bash finetune.sh
 ```
