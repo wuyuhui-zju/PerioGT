@@ -18,12 +18,12 @@ Activate the created enviroment:
 conda activate PerioGT
 ```
 ## Data preprocessing
-Since the calculation of the properties of polymers is time-consuming, we prepare the pre-training data before pre-training:
+Prepare the pre-training data before pre-training. The pretrain dataset can be downloaded from the link given in the manuscript. Place the `product_smiles.csv` file extracted from `pretrain.zip` into the `datasets/pretrain/` directory.
 ```
 cd PerioGT_common/scripts
 bash prepare_pt_dataset.sh
 ```
-The processed files can be downloaded from the Zenodo link given in the muniscript. Place the directory extracted from the `pretrain.zip` file into the `datasets` directory.
+Since the calculation of the properties of polymers was time-consuming, we also provided the processed files in `pretrain.zip`.
 ## Pre-training
 We provide a script to pre-train the base model (100M). Switch to the scripts directory.
 ```
