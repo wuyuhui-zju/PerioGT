@@ -1,7 +1,7 @@
 ## System requirements
 This package has been tested on the following system:
-*Linux: Ubuntu22.04
-*CUDA 12.2
+- Linux: Ubuntu22.04
+- CUDA 12.2
 
 ## Environment configuration
 Clone this repository:
