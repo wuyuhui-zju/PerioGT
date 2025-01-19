@@ -9,7 +9,8 @@ from mordred import Calculator, descriptors
 import numpy as np
 import pandas as pd
 from rdkit.Chem import MACCSkeys, AllChem
-
+import warnings
+warnings.filterwarnings("ignore")
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Arguments")
@@ -19,8 +20,8 @@ def parse_args():
     return args
 
 
-def doit(args, ind):
-    product_list = pd.read_csv(f'{args.data_path}/dataset_split_{ind}.csv').product_smiles.values.tolist()
+def doit(args, ind, sub_df):
+    product_list = sub_df.product_smiles.values.tolist()
 
     print(f"calculating mordred descriptors: {ind}")
     des_list = []
@@ -53,8 +54,11 @@ if __name__ == '__main__':
     args = parse_args()
     t1 = time()
     pros = []
-    for i in range(0, 32):
-        process = multiprocessing.Process(target=doit, args=(args, i,))
+
+    df = pd.read_csv(f'{args.data_path}/product_smiles.csv')
+    sub_dfs = np.array_split(df, args.n_jobs)
+    for i, df in enumerate(sub_dfs):
+        process = multiprocessing.Process(target=doit, args=(args, i, df))
         pros.append(process)
         process.start()
 
