@@ -1,11 +1,14 @@
-
+## System requirements
+This package has been tested on the following system:
+*Linux: Ubuntu22.04
+*CUDA 12.2
 
 ## Environment configuration
 Clone this repository:
 ```
 git clone https://github.com/wuyuhui-zju/PerioGT.git
 ```
- Create the enviroment with Anaconda:
+ Create the environment with Anaconda in few minutes:
 ```
 cd PerioGT
 conda env create
