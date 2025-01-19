@@ -23,7 +23,7 @@ Since the calculation of the properties of polymers is time-consuming, we prepar
 cd PerioGT_common/scripts
 bash prepare_pt_dataset.sh
 ```
-The processed files can be downloaded from the Zenodo link given in the muniscript. Place the files downloaded from the `pretrain` directory into the `datasets` directory.
+The processed files can be downloaded from the Zenodo link given in the muniscript. Place the directory extracted from the `pretrain.zip` file into the `datasets` directory.
 ## Pre-training
 We provide a script to pre-train the base model (100M). Switch to the scripts directory.
 ```
@@ -38,13 +38,13 @@ python -u -m torch.distributed.run \
     --backbone $BACKBONE \
     --config $CONFIG \
 ```
-We implement the light and GraphGPS architectures. We also provide pre-trained models, which you can download from link. Download the pretrained weights `base.pth`and put it in `PerioGT_common/checkpoints/pretrained/light` directory.
+We implement the light and GraphGPS architectures. The pre-training process takes approximately 50 hours on three RTX4090 GPUs, so we provide the pre-trained checkpoint, which you can download from the given link. Download the pretrained weights `checkpoints.zip`and put `checkpoints/pretrained/light/base.pth` in `PerioGT_common/checkpoints/pretrained/light` directory.
 ## Fine-tuning
 After run the pre-training script or download the pre-trained weights, we fine-tune the models on downstream tasks. First, we use `egc` dataset as an example and provide a script to prepare PolyGraphs:
 ```
 bash prepare_ft_dataset.sh
 ```
-You can change the dataset by specifying the `--dataset` argument in the script. Notably, the computation process of prompts is time-consuming, and we provide the processed dataset at link. Please place the downloaded `egc` file in the `datasets` directory. Finally, model can be fine-tuned by running:
+You can change the dataset by specifying the `--dataset` argument in the script. The computation process of prompts is time-consuming, and we provide the processed dataset at link. Please unzip the downloaded `egc.zip` file and place the `egc` directory in the `PerioGT_common/datasets/` directory. Finally, model can be fine-tuned by running:
 ```
 bash finetune.sh
 ```
@@ -54,4 +54,4 @@ After fine-tuning, evaluate the model by running the following script:
 ```
 bash evaluation.sh
 ```
-You can also download our fine-tuned model from link. Please place the downloaded weights in the `checkpoints/egc` directory.
+You can also download our fine-tuned checkpoints from link. Please place the downloaded weights in the `checkpoints/egc` directory.
