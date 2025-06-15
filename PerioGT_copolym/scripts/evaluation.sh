@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CONFIG="base"
-DATASET="mar1"
+DATASET="ea"
 
 python evaluation.py \
     --config $CONFIG \

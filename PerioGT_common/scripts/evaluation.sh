@@ -2,7 +2,7 @@
 
 BACKBONE="light"
 CONFIG="base"
-DATASET="egc"
+DATASET="eat"
 
 python evaluation.py \
     --config $CONFIG \
