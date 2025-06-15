@@ -40,11 +40,11 @@ python -u -m torch.distributed.run \
 ```
 We implement the light and GraphGPS architectures. The pre-training process takes approximately 50 hours on three RTX4090 GPUs, so we provide the pre-trained checkpoint, which you can download from the given link. Download the pretrained weights `checkpoints.zip`and put `checkpoints/pretrained/light/base.pth` in `PerioGT_common/checkpoints/pretrained/light` directory.
 ## Fine-tuning
-After run the pre-training script or download the pre-trained weights, we fine-tune the models on downstream tasks. First, we use `egc` dataset as an example and provide a script to prepare PolyGraphs:
+After run the pre-training script or download the pre-trained weights, we fine-tune the models on downstream tasks. First, we use `eat` dataset as an example and provide a script to prepare PolymerGraphs:
 ```
 bash prepare_ft_dataset.sh
 ```
-You can change the dataset by specifying the `--dataset` argument in the script. The computation process of prompts is time-consuming, and we provide the processed dataset at link. Please unzip the downloaded `egc.zip` file and place the `egc` directory in the `PerioGT_common/datasets/` directory. Finally, model can be fine-tuned by running:
+You can change the dataset by specifying the `--dataset` argument in the script. The computation process of prompts is time-consuming, and we provide the processed dataset at link. Please unzip the downloaded `eat.zip` file and place the `eat` directory in the `PerioGT_common/datasets/` directory. Finally, model can be fine-tuned by running:
 ```
 bash finetune.sh
 ```
@@ -54,4 +54,4 @@ After fine-tuning, evaluate the model by running the following script:
 ```
 bash evaluation.sh
 ```
-You can also download our fine-tuned checkpoints from link. Please place the downloaded weights in the `checkpoints/egc` directory.
+You can also download our fine-tuned checkpoints from link. Please place the downloaded weights in the `checkpoints/eat` directory.
