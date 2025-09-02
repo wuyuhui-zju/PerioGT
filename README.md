@@ -23,7 +23,9 @@ Since the calculation of the properties of polymers is time-consuming, we prepar
 cd PerioGT_common/scripts
 bash prepare_pt_dataset.sh
 ```
-The processed files can be downloaded from the Zenodo link given in the muniscript. Place the directory extracted from the `pretrain.zip` file into the `datasets` directory.
+The processed files can be downloaded from the Zenodo link given in the muniscript. 
+Unzip all four `pretrain_data.zip` parts individually, and merge their contents into the `datasets/` directory.
+
 ## Pre-training
 We provide a script to pre-train the base model (100M). Switch to the scripts directory.
 ```
@@ -40,7 +42,7 @@ python -u -m torch.distributed.run \
 ```
 We implement the light and GraphGPS architectures. The pre-training process takes approximately 50 hours on three RTX4090 GPUs, so we provide the pre-trained checkpoint, which you can download from the given link. Download the pretrained weights `checkpoints.zip`and put `checkpoints/pretrained/light/base.pth` in `PerioGT_common/checkpoints/pretrained/light` directory.
 ## Fine-tuning
-After run the pre-training script or download the pre-trained weights, we fine-tune the models on downstream tasks. First, we use `egc` dataset as an example and provide a script to prepare PolyGraphs:
+After run the pre-training script or download the pre-trained weights, we fine-tune the models on downstream tasks. First, we use `egc` dataset as an example and provide a script to prepare PolymerGraphs:
 ```
 bash prepare_ft_dataset.sh
 ```

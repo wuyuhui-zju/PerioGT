@@ -37,19 +37,6 @@ def get_triplet_emb_layer(d_g_feats, d_fp_feats, d_md_feats, device):
     triplet_emb_layer.apply(lambda module: init_params(module))
     return triplet_emb_layer.to(device)
 
-
-def get_ratio_projector(d_input_feats, d_g_feats, n_layers, activation, device):
-    ratio_projector = MLP(d_input_feats, d_g_feats, n_layers, activation)
-    ratio_projector.apply(lambda module: init_params(module))
-    return ratio_projector.to(device)
-
-
-def get_global_node_emb(d_g_feats, device):
-    global_node_emb_layer = nn.Embedding(1, d_g_feats)
-    global_node_emb_layer.apply(lambda module: init_params(module))
-    return global_node_emb_layer.to(device)
-
-
 def get_node_attn(dim_emb, dropout, device):
     node_attn = NodeSelfAttention(dim_emb, dropout)
     node_attn.apply(lambda module: init_params(module))
@@ -77,9 +64,9 @@ def get_model(args):
         n_node_types=vocab.vocab_size
     ).to(device)
     model.triplet_emb = get_triplet_emb_layer(d_g_feats=config['d_g_feats'], d_fp_feats=1191, d_md_feats=1613, device=device)
-    model.triplet_emb.embedding = nn.Embedding(10, config['d_g_feats']).to(device)
-    model.triplet_emb.global_node_emb = get_global_node_emb(d_g_feats=config['d_g_feats'], device=device)
-    model.predictor = get_predictor(dim_emb=config['d_g_feats'] * 4, n_tasks=1, n_layers=2, predictor_drop=args.dropout, device=device, d_hidden_feats=256)
+    model.triplet_emb.embedding = nn.Embedding(3, config['d_g_feats']).to(device)
+    model.triplet_emb.global_node_emb = nn.Embedding(3, config['d_g_feats']).to(device)
+    model.predictor = get_predictor(dim_emb=config['d_g_feats'] * 5, n_tasks=1, n_layers=2, predictor_drop=args.dropout, device=device, d_hidden_feats=256)
     model.node_attn = get_node_attn(dim_emb=config['d_g_feats'], dropout=args.dropout, device=device)
 
     del model.md_predictor

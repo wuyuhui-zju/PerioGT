@@ -1,27 +1,22 @@
-import sys
-sys.path.append('..')
-
 import argparse
-import os
+from multiprocessing import cpu_count
 import pandas as pd
 from dgl import save_graphs
-from mordred import Calculator, descriptors
 import pickle
 import numpy as np
-from rdkit.Chem import MACCSkeys, AllChem
-from rdkit import Chem
 import dgl.backend as F
 import torch
 from tqdm import tqdm
 from scipy import sparse as sp
 import warnings
 
+import sys
+sys.path.append('..')
 from data.vocab import Vocab
-from utils.aug import generate_oligomer_smiles
 from models.light import LiGhTPredictor as LiGhT
 from models.graphgps import GraphGPS
 from utils.function import load_config
-
+from utils.features import precompute_features
 warnings.filterwarnings("ignore")
 
 
@@ -29,6 +24,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Arguments")
     parser.add_argument("--dataset", type=str, required=True)
     parser.add_argument("--device", type=str, required=True)
+    parser.add_argument("--workers", type=int, default=max(1, cpu_count() - 1))
     parser.add_argument("--config", type=str, default="base")
     parser.add_argument("--backbone", type=str, default="light")
     parser.add_argument("--model_path", type=str, default="../checkpoints/pretrained/light/base.pth")
@@ -88,31 +84,29 @@ def prepare_dataset(args):
     df = pd.read_csv(f"{args.data_path}/{args.dataset}/{args.dataset}.csv")
     cache_file_path = f"{args.data_path}/{args.dataset}/graphs.pkl"
     smiless = df.smiles.values.tolist()
-
-    monomer_list = []
-    product_list = []
-    for smiles in smiless:
-        product_smiles = generate_oligomer_smiles(num_repeat_units=3, smiles=smiles)
-        monomer_list.append(smiles)
-        product_list.append(product_smiles)
-
     task_names = df.columns.drop(['smiles']).tolist()
 
-    print('constructing graphs')
     model = get_model(args)
+
+    print('Precomputing features')
+    feat_cache = precompute_features(smiless, units=(3, 6, 9), workers=args.workers)
+
     if args.backbone == "light":
         from data.smiles2g_light import smiles_to_graph_with_prompt, smiles_to_graph_without_prompt
     elif args.backbone == "graphgps":
         from data.smiles2g_graphgps import smiles_to_graph_with_prompt, smiles_to_graph_without_prompt
     else:
         raise ValueError
+
+    print('constructing graphs')
     graphs = []
-    for smiles in tqdm(monomer_list, total=len(monomer_list), ncols=100):
+    for smiles in tqdm(smiless, total=len(smiless), ncols=100):
         if args.no_prompt:
             g = smiles_to_graph_without_prompt(smiles, n_virtual_nodes=2)
         else:
-            g = smiles_to_graph_with_prompt(smiles, model, scaler, args.device, n_virtual_nodes=2)
+            g = smiles_to_graph_with_prompt(smiles, model, scaler, args.device, feat_cache, n_virtual_nodes=2)
         graphs.append(g)
+
     valid_ids = []
     valid_graphs = []
     for i, g in enumerate(graphs):
@@ -125,34 +119,23 @@ def prepare_dataset(args):
         _label_values.astype(np.float32))[valid_ids]
     print('saving graphs')
     print(f'graphs length: {len(valid_ids)}')
-    save_graphs(cache_file_path, valid_graphs,
-                labels={'labels': labels})
+    save_graphs(cache_file_path, valid_graphs, labels={'labels': labels})
 
-    print('extracting fingerprints')
+    print('extracting expert knowledge')
     fp_list = []
-    for smiles in product_list:
-        mol = Chem.MolFromSmiles(smiles)
-        maccs_fp = MACCSkeys.GenMACCSKeys(mol)
-        ec_fp = AllChem.GetMorganFingerprintAsBitVect(mol, 4, nBits=1024)
-        fp_list.append(list(map(int, list(maccs_fp + ec_fp))))
+    des_list = []
+    for smiles in smiless:
+        fp, md = feat_cache.get((smiles, 3), (None, None))
+        fp_list.append(fp)
+        des_list.append(md.astype(np.float32))
+
     fp_list = np.array(fp_list, dtype=np.float32)
     print(f"fp shape: {fp_list.shape}")
     fp_sp_mat = sp.csc_matrix(fp_list)
-    print('saving fingerprints')
     sp.save_npz(f"{args.data_path}/{args.dataset}/maccs_ecfp.npz", fp_sp_mat)
 
-    print('extracting mordred descriptors')
-    des_list = []
-    for smiles in product_list:
-        calc = Calculator(descriptors, ignore_3D=True)
-        mol = Chem.MolFromSmiles(smiles)
-        des = np.array(list(calc(mol).values()), dtype=np.float32)
-        des_list.append(des)
     des = np.array(des_list)
-    des = np.where(np.isnan(des), 0, des)
-    des = np.where(des > 10 ** 12, 10 ** 12, des)
     des_norm = scaler.transform(des)
-
     print(f"des shape: {des.shape}")
     np.savez_compressed(f"{args.data_path}/{args.dataset}/polymer_descriptors.npz", md=des_norm)
 

@@ -14,6 +14,7 @@ from itertools import permutations
 import networkx as nx
 
 from utils.aug import generate_oligomer_smiles, knowledge_augment_traverse
+from utils.function import preprocess_batch_light
 
 
 __all__ = ["smiles_to_graph_with_prompt", "smiles_to_graph"]
@@ -48,40 +49,32 @@ atom_featurizer_all = ConcatFeaturizer([  # 137
 ])
 
 
-def smiles_to_graph_with_prompt(base_smiles, model, scaler, device, max_length=5, n_virtual_nodes=2):
+def map_n_to_units(n: int) -> int:
+    mapping = {1: 3, 2: 6, 3: 9}
+    return mapping.get(int(n), 3)
+
+
+def smiles_to_graph_with_prompt(base_smiles, model, scaler, device, feat_cache, max_length=5, n_virtual_nodes=2):
     graphs, smiless, smiless_n = smiles_to_graph_node_emb(base_smiles, max_length, n_virtual_nodes)
     base_graph = graphs[0]
-
-    fp_with_n = []
-    des_with_n = []
-    calc = Calculator(descriptors, ignore_3D=True)
-    for i in [3, 6, 9]:
-        smiles = generate_oligomer_smiles(num_repeat_units=i, smiles=base_smiles)
-        mol = Chem.MolFromSmiles(smiles)
-        # fp
-        maccs_fp = MACCSkeys.GenMACCSKeys(mol)
-        ec_fp = AllChem.GetMorganFingerprintAsBitVect(mol, 4, nBits=1024)
-        # md
-        des = np.array(list(calc(mol).values()), dtype=np.float32)
-
-        fp_with_n.append(list(map(int, list(maccs_fp + ec_fp))))
-        des_with_n.append(des)
 
     fp_list = []
     des_list = []
     for n in smiless_n:
-        fp_list.append(fp_with_n[n - 1])
-        des_list.append(des_with_n[n - 1])
+        u = map_n_to_units(n)
+        fp, md = feat_cache.get((base_smiles, u), (None, None))
+        fp_list.append(fp)
+        des_list.append(md)
 
     fp_list = np.array(fp_list, dtype=np.float32)
     des = np.array(des_list, dtype=np.float32)
-    des = np.where(np.isnan(des), 0, des)
-    des = np.where(des > 10 ** 12, 10 ** 12, des)
 
     # normalization
     des_norm = scaler.transform(des).astype(np.float32)
 
-    graphs = dgl.batch(graphs).to(device)
+    graphs = dgl.batch(graphs)
+    graphs.edata['path'][:, :] = preprocess_batch_light(graphs.batch_num_nodes(), graphs.batch_num_edges(), graphs.edata['path'][:, :])
+    graphs = graphs.to(device)
     fps = torch.from_numpy(fp_list).to(device)
     mds = torch.from_numpy(des_norm).to(device)
 
