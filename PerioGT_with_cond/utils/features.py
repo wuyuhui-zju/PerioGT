@@ -20,7 +20,6 @@ def _fp_md_from_smiles(smiles: str):
     ec_fp = AllChem.GetMorganFingerprintAsBitVect(mol, 4, nBits=1024)
     fp = list(map(int, list(maccs_fp + ec_fp)))
 
-    # Mordred
     des = np.array(list(_GLOBAL_CALC(mol).values()), dtype=np.float32)
     des = np.where(np.isnan(des), 0, des)
     des = np.where(des > 1e12, 1e12, des)
@@ -52,10 +51,10 @@ def precompute_features(base_smiles_list, units=(3,6,9), workers=None):
     uniq_smiles = list(uniq_smiles_set)
     with Pool(processes=workers) as pool:
         results = list(tqdm(
-            pool.imap_unordered(_fp_md_from_smiles, uniq_smiles, chunksize=1),
+            pool.imap_unordered(_fp_md_from_smiles, uniq_smiles, chunksize=4),
             total=len(uniq_smiles),
             ncols=100,
-            bar_format='{l_bar}{bar}| [{elapsed}<{remaining}, {rate_fmt}]'
+            # bar_format='{l_bar}{bar}| [{elapsed}<{remaining}, {rate_fmt}]'
         ))
 
     fpmd_map = {sm: (fp, md) for sm, fp, md in results}

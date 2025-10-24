@@ -12,7 +12,7 @@ from dgl import function as fn
 from dgl.nn.functional import edge_softmax
 import numpy as np
 
-from data.smiles2g_light import VIRTUAL_ATOM_FEATURE_PLACEHOLDER, VIRTUAL_BOND_FEATURE_PLACEHOLDER
+from data.constants import VIRTUAL_ATOM_FEATURE_PLACEHOLDER, VIRTUAL_BOND_FEATURE_PLACEHOLDER
 
 
 def init_params(module):
@@ -319,7 +319,6 @@ class LiGhTPredictor(nn.Module):
         # Model
         self.model = LiGhT(d_g_feats, d_hpath_ratio, path_length, n_mol_layers, n_heads, n_ffn_dense_layers, feat_drop, attn_drop, activation)
         # Predict
-        # self.node_predictor = nn.Linear(d_g_feats, n_node_types)
         self.node_predictor = nn.Sequential(
             nn.Linear(d_g_feats, d_g_feats),
             activation,
@@ -344,7 +343,7 @@ class LiGhTPredictor(nn.Module):
         self.apply(lambda module: init_params(module))
 
     def forward(self, g, fp, md):
-        indicators = g.ndata['vavn']  # 0 indicates normal atoms and nodes (triplets); -1 indicates virutal atoms; >=1 indicate virtual nodes
+        indicators = g.ndata['vavn']
         # Input
         node_h = self.node_emb(g.ndata['begin_end'], indicators)
         edge_h = self.edge_emb(g.ndata['edge'], indicators)
@@ -365,7 +364,7 @@ class LiGhTPredictor(nn.Module):
             triplet_h[indicators == 1]), self.md_predictor(triplet_h[indicators == 2]), self.cl_projector(g_feats)
 
     def forward_tune(self, g, fp, md):
-        indicators = g.ndata['vavn']  # 0 indicates normal atoms and nodes (triplets); -1 indicates virutal atoms; >=1 indicate virtual nodes
+        indicators = g.ndata['vavn']
         # Input
         node_h = self.node_emb(g.ndata['begin_end'], indicators)
         edge_h = self.edge_emb(g.ndata['edge'], indicators)
@@ -394,6 +393,21 @@ class LiGhTPredictor(nn.Module):
         triplet_h = self.model(g, triplet_h)
 
         return triplet_h, bids
+
+    def generate_features(self, g, fp, md):
+        indicators = g.ndata['vavn']
+        node_h = self.node_emb(g.ndata['begin_end'], indicators)
+        edge_h = self.edge_emb(g.ndata['edge'], indicators)
+        triplet_h = self.triplet_emb(node_h, edge_h, fp, md, indicators)
+        triplet_h = self.model(g, triplet_h)
+        # Readout
+        fp_vn = triplet_h[indicators == 1]
+        md_vn = triplet_h[indicators == 2]
+        g.ndata['ht'] = triplet_h
+        g.remove_nodes(np.where(indicators.detach().cpu().numpy() >= 1)[0])
+        readout = dgl.readout_nodes(g, 'ht', op=self.readout_mode)
+        g_feats = torch.cat([fp_vn, md_vn, readout], dim=-1)
+        return g_feats
 
 
 if __name__ == "__main__":

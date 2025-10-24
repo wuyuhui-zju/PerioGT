@@ -11,7 +11,7 @@ from dgl import function as fn
 from dgl.nn.functional import edge_softmax
 import numpy as np
 
-from data.smiles2g import VIRTUAL_ATOM_FEATURE_PLACEHOLDER, VIRTUAL_BOND_FEATURE_PLACEHOLDER
+from data.constants import VIRTUAL_ATOM_FEATURE_PLACEHOLDER, VIRTUAL_BOND_FEATURE_PLACEHOLDER
 
 
 def init_params(module):
@@ -300,14 +300,14 @@ class NodeSelfAttention(nn.Module):
         x[indicators == 6][:, 0, :] = self.virutal_node_emb.weight
         x[indicators == 7][:, 0, :] = self.virutal_node_emb.weight
 
-        # x 的形状是 [num_node, len, dim_emb]
+        # x: [num_node, len, dim_emb]
         num_node, seq_len, _ = x.size()
 
         # 为每个节点复制cls_token
         cls_tokens = self.cls_token.expand(num_node, -1, -1)
 
         # 将cls_token添加到序列的前面
-        x = torch.cat((cls_tokens, x), dim=1)  # 新的形状是 [num_node, len+1, dim_emb]
+        x = torch.cat((cls_tokens, x), dim=1)  # [num_node, len+1, dim_emb]
 
         # 生成一个mask，以忽略padding的token
         mask = (x.sum(dim=-1) == 0)  # 计算哪些位置是padding（在最后一个维度上求和）
@@ -321,7 +321,7 @@ class NodeSelfAttention(nn.Module):
         hidden_state = self.dropout_2(hidden_state)
         hidden_state = self.norm_2(hidden_state + x)
 
-        cls_output = hidden_state[:, 0, :]  # 形状是 [num_node, dim_emb]
+        cls_output = hidden_state[:, 0, :]  # [num_node, dim_emb]
         cls_output = self.linear_3(cls_output)
 
         return triplet_h + self.alpha * cls_output
@@ -361,7 +361,6 @@ class LiGhTPredictor(nn.Module):
             activation
         )
         # Predict
-        # self.node_predictor = nn.Linear(d_g_feats, n_node_types)
         self.node_predictor = nn.Sequential(
             nn.Linear(d_g_feats, d_g_feats),
             activation,
@@ -386,7 +385,7 @@ class LiGhTPredictor(nn.Module):
         self.apply(lambda module: init_params(module))
 
     def forward(self, g, fp, md):
-        indicators = g.ndata['vavn']  # 0 indicates normal atoms and nodes (triplets); -1 indicates virutal atoms; >=1 indicate virtual nodes
+        indicators = g.ndata['vavn']
         # Input
         node_h = self.node_emb(g.ndata['begin_end'], indicators)
         edge_h = self.edge_emb(g.ndata['edge'], indicators)
@@ -412,7 +411,7 @@ class LiGhTPredictor(nn.Module):
         node_h = self.node_emb(g.ndata['begin_end'], indicators)
         edge_h = self.edge_emb(g.ndata['edge'], indicators)
         triplet_h = self.triplet_emb(node_h, edge_h, fp_1, md_1, fp_2, md_2, ratio, indicators)
-        triplet_h = self.node_attn(g.ndata['prompt'], triplet_h, indicators)
+        triplet_h = self.node_attn(g.ndata['prompt'].float(), triplet_h, indicators)
 
         # Model
         triplet_h = self.model(g, triplet_h)

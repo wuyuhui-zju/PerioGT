@@ -6,6 +6,8 @@ import torch
 import dgl
 import numpy as np
 import yaml
+import multiprocessing
+import cloudpickle
 
 
 def load_config(args, file_path="../config.yaml"):
@@ -80,6 +82,54 @@ def random_walk_pe(g, k, eweight_name=None):
     PE = F.stack(PE,dim=-1)
 
     return PE
+
+
+class SafeSubstructureMatcher:
+    def __init__(self, timeout=3):
+        self.timeout = timeout
+        self._start_worker()
+
+    def _start_worker(self):
+        self.task_queue = multiprocessing.Queue()
+        self.result_queue = multiprocessing.Queue()
+        self.process = multiprocessing.Process(target=self._worker_loop)
+        self.process.daemon = True
+        self.process.start()
+
+    def _restart_worker(self):
+        self.process.terminate()
+        self.process.join()
+        self._start_worker()
+
+    def _worker_loop(self):
+        while True:
+            try:
+                mol_data, patt_data = self.task_queue.get()
+                mol = cloudpickle.loads(mol_data)
+                patt = cloudpickle.loads(patt_data)
+                if mol is not None and patt is not None:
+                    match = mol.GetSubstructMatch(patt)
+                    self.result_queue.put(match)
+                else:
+                    self.result_queue.put(())
+            except Exception as e:
+                self.result_queue.put(())
+
+    def match(self, mol, patt):
+        mol_data = cloudpickle.dumps(mol)
+        patt_data = cloudpickle.dumps(patt)
+
+        self.task_queue.put((mol_data, patt_data))
+        try:
+            return self.result_queue.get(timeout=self.timeout)
+        except multiprocessing.queues.Empty:
+            self._restart_worker()
+            return ()
+
+    def shutdown(self):
+        if self.process.is_alive():
+            self.process.terminate()
+            self.process.join()
 
 
 if __name__ == "__main__":

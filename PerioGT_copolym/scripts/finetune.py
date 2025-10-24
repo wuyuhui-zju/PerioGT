@@ -31,7 +31,7 @@ def seed_worker(worker_id):
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Arguments")
-    parser.add_argument("--seed", type=int, default=33)
+    parser.add_argument("--seed", type=int, default=44)
     parser.add_argument("--n_epochs", type=int, default=50)
 
     parser.add_argument("--config", type=str, required=True)

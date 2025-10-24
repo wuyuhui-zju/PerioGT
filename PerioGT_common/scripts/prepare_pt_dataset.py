@@ -1,69 +1,78 @@
 import multiprocessing
-import gc
-from time import time
+import pickle
 from scipy import sparse as sp
+import numpy as np
+import pandas as pd
 import argparse
 from tqdm import tqdm
 from rdkit import Chem
 from mordred import Calculator, descriptors
-import numpy as np
-import pandas as pd
 from rdkit.Chem import MACCSkeys, AllChem
+from functools import partial
+
+import sys
+sys.path.append('..')
+from utils.aug import generate_multimer_smiles
+
 import warnings
 warnings.filterwarnings("ignore")
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Arguments")
     parser.add_argument("--data_path", type=str, required=True)
+    parser.add_argument("--dataset", type=str, default="product_smiles")
+    parser.add_argument("--n_rus", type=int, default=3)
     parser.add_argument("--n_jobs", type=int, default=32)
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
-def doit(args, ind, sub_df):
-    product_list = sub_df.product_smiles.values.tolist()
+def _calc_fp(smiles):
+    mol = Chem.MolFromSmiles(smiles)
+    maccs_fp = MACCSkeys.GenMACCSKeys(mol)
+    ec_fp = AllChem.GetMorganFingerprintAsBitVect(mol, 4, nBits=1024)
+    return np.array(list(map(int, list(maccs_fp + ec_fp))))
 
-    print(f"calculating mordred descriptors: {ind}")
-    des_list = []
-    for smiles in tqdm(product_list, total=len(product_list), desc=f"Processing: {ind}", ncols=100):
-        calc = Calculator(descriptors, ignore_3D=True)
-        mol = Chem.MolFromSmiles(smiles)
-        des = np.array(list(calc(mol).values()), dtype=np.float32)
-        des_list.append(des)
 
-    des = np.array(des_list)
-    gc.collect()
-    np.savez_compressed(f"{args.data_path}/polymer_descriptors_{ind}.npz", pd=des)
-
-    print(f"calculating fingerprint: {ind}")
-    fp_list = []
-    for smiles in tqdm(product_list, total=len(product_list), desc=f"Processing: {ind}", ncols=100):
-        mol = Chem.MolFromSmiles(smiles)
-        maccs_fp = MACCSkeys.GenMACCSKeys(mol)
-        ec_fp = AllChem.GetMorganFingerprintAsBitVect(mol, 4, nBits=1024)
-        fp_list.append(list(map(int, list(maccs_fp + ec_fp))))
-
-    fp_list = np.array(fp_list, dtype=np.float32)
-    gc.collect()
-    fp_sp_mat = sp.csc_matrix(fp_list)
-    print('saving fingerprints')
-    sp.save_npz(f"{args.data_path}/maccs_ecfp_{ind}.npz", fp_sp_mat)
+def _calc_des(smiles, calc):
+    mol = Chem.MolFromSmiles(smiles)
+    return np.array(list(calc(mol).values()), dtype=np.float32)
 
 
 if __name__ == '__main__':
     args = parse_args()
-    t1 = time()
-    pros = []
+    smiless = pd.read_csv(f'{args.data_path}/{args.dataset}.csv').smiles.values.tolist()
 
-    df = pd.read_csv(f'{args.data_path}/product_smiles.csv')
-    sub_dfs = np.array_split(df, args.n_jobs)
-    for i, df in enumerate(sub_dfs):
-        process = multiprocessing.Process(target=doit, args=(args, i, df))
-        pros.append(process)
-        process.start()
+    print("Preprocessing smiles")
+    _generate = partial(generate_multimer_smiles, args.n_rus, replace_dummy_atoms=True)
+    with multiprocessing.Pool(processes=args.n_jobs) as pool:
+        smiless = list(tqdm(pool.imap(_generate, smiless, chunksize=8), total=len(smiless), ncols=100))
 
-    for process in pros:
-        process.join()
+    print("Computing fingerprints")
+    with multiprocessing.Pool(processes=args.n_jobs) as pool:
+        fp_list = list(tqdm(
+            pool.imap(_calc_fp, smiless, chunksize=1),
+            total=len(smiless),
+            ncols=100,
+        ))
 
-    t2 = time()
-    print(t2 - t1)
+    fp_array = np.array(fp_list, dtype=np.float32)
+    fp_sp_mat = sp.csc_matrix(fp_array)
+    sp.save_npz(f"{args.data_path}/maccs_ecfp_n{args.n_rus}.npz", fp_sp_mat)
+
+    print("Computing mordred descriptors")
+    calc = Calculator(descriptors, ignore_3D=True)
+    _calc_des_partial = partial(_calc_des, calc=calc)
+
+    with multiprocessing.Pool(processes=args.n_jobs) as pool:
+        des_list = list(tqdm(
+            pool.imap(_calc_des_partial, smiless, chunksize=1),
+            total=len(smiless),
+            ncols=100,
+        ))
+
+    des_array = np.array(des_list, dtype=np.float32)
+    with open("../datasets/pretrain/scaler_all.pkl", 'rb') as file:
+        scaler = pickle.load(file)
+    des_array = scaler.transform(des_array).astype(np.float32)
+    np.savez_compressed(f"{args.data_path}/molecular_descriptors_n{args.n_rus}_norm.npz", pd=des_array)

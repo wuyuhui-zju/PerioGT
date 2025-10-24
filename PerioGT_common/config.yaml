@@ -27,6 +27,7 @@ graphgps:
     d_g_feats: 512
     d_cl_feats: 256
     n_mol_layers: 10
+    pos_enc_size: 28
     n_heads: 8
     n_ffn_dense_layers: 2
     input_drop: 0.0

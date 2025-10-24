@@ -5,14 +5,14 @@ from rdkit import Chem
 import numpy as np
 
 
-def generate_oligomer_smiles(num_repeat_units, smiles, replace_star_atom=True):
+def generate_multimer_smiles(num_repeat_units, smiles, replace_dummy_atoms=True):
     if num_repeat_units == 1:
         return smiles
     monomer = Chem.MolFromSmiles(smiles)
     repeat_points = []
     cnct_points = []
     bond_type = []
-    num_star_atoms = 0
+    num_dummy_atoms = 0
     for atom in monomer.GetAtoms():
         if atom.GetSymbol() == '*':
             repeat_points.append(atom.GetIdx())
@@ -20,9 +20,9 @@ def generate_oligomer_smiles(num_repeat_units, smiles, replace_star_atom=True):
             assert len(neis) == 1, f"*atom has more than one neighbor: {smiles}"
             cnct_points.append(atom.GetNeighbors()[0].GetIdx())
             bond_type.append(monomer.GetBondBetweenAtoms(atom.GetIdx(), atom.GetNeighbors()[0].GetIdx()).GetBondType())
-            num_star_atoms += 1
+            num_dummy_atoms += 1
 
-    assert num_star_atoms == 2, "molecule has more than 2 *atoms"
+    assert num_dummy_atoms == 2, "molecule has more than 2 *atoms"
     assert bond_type[0] == bond_type[1], "bond type of 2 *atoms are not same"
 
     num_atoms = monomer.GetNumAtoms()
@@ -43,7 +43,7 @@ def generate_oligomer_smiles(num_repeat_units, smiles, replace_star_atom=True):
         removed_atoms_idx.extend([int(REPEAT_LIST[i, 1]), int(REPEAT_LIST[i + 1, 0])])
 
     # Replace the atoms at both ends using H
-    if replace_star_atom:
+    if replace_dummy_atoms:
         ed_oligomer.ReplaceAtom(int(REPEAT_LIST[0, 0]), Chem.Atom(1))
         ed_oligomer.ReplaceAtom(int(REPEAT_LIST[num_repeat_units - 1, 1]), Chem.Atom(1))
 
@@ -98,13 +98,12 @@ def periodicity_augment(smiles, max_mrus=3):
     final_mol = ed_mol.GetMol()
 
     num_repeat_units = np.random.choice(np.arange(1, max_mrus+1))
-    aug_smiles = generate_oligomer_smiles(num_repeat_units=num_repeat_units, smiles=Chem.MolToSmiles(final_mol),
-                                          replace_star_atom=False)
+    aug_smiles = generate_multimer_smiles(num_repeat_units=num_repeat_units, smiles=Chem.MolToSmiles(final_mol), replace_dummy_atoms=False)
 
     return aug_smiles
 
 
-def knowledge_augment_traverse(smiles: str) -> List[str]:
+def periodicity_augment_traverse(smiles: str) -> List[str]:
     mol = Chem.MolFromSmiles(smiles)
     atom_p = []
     atom_pn = []
@@ -122,8 +121,8 @@ def knowledge_augment_traverse(smiles: str) -> List[str]:
 
     # random select a bond
     # bonds = random.sample(backbone_bonds, k=5)
-    ka_samples = []
-    ka_samples.append(smiles)
+    pa_samples = []
+    pa_samples.append(smiles)
     for bond in backbone_bonds:
         begin_at_idx, end_at_idx = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
         bond = mol.GetBondBetweenAtoms(begin_at_idx, end_at_idx)
@@ -143,12 +142,12 @@ def knowledge_augment_traverse(smiles: str) -> List[str]:
         ed_mol.RemoveAtom(min(atom_p))
 
         final_mol = ed_mol.GetMol()
-        ka_samples.append(Chem.MolToSmiles(final_mol))
+        pa_samples.append(Chem.MolToSmiles(final_mol))
 
     results = []
-    [results.append(i) for i in ka_samples if i not in results]
+    [results.append(i) for i in pa_samples if i not in results]
     return results
 
 
 if __name__ == '__main__':
-    print(generate_oligomer_smiles(num_repeat_units=3, smiles="*=Cc1ccc(C=c2ccc(=c3ccc(=*)s3)s2)s1"))
+    print(generate_multimer_smiles(num_repeat_units=3, smiles="*=Cc1ccc(C=c2ccc(=c3ccc(=*)s3)s2)s1"))

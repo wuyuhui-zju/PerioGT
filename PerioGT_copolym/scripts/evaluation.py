@@ -44,7 +44,7 @@ def finetune(args):
     trainer = Trainer(args, optimizer, lr_scheduler, loss_fn, evaluator, final_evaluator, result_tracker, device=device, label_mean=train_dataset.mean.to(device), label_std=train_dataset.std.to(device))
     best_test = trainer.eval(model, test_loader)
     best_test_r2 = trainer.eval(model, test_loader, is_test=True)
-    print(f"Test RMSE: {best_test:.3f}")
+    print(f"Test RMSE: {best_test:.5f}")
     print(f"Test R2: {best_test_r2[0]:.3f}")
 
 

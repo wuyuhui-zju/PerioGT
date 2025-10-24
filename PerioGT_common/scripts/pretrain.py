@@ -1,20 +1,20 @@
-import sys
-sys.path.append('..')
-
 import argparse
 import torch
 from torch.optim import Adam
 from torch.nn import MSELoss, BCEWithLogitsLoss, CrossEntropyLoss
 import os
-
-from trainer.scheduler import PolynomialDecayLR
+import sys
+sys.path.append('..')
 from trainer.pretrain_trainer import Trainer
+from trainer.scheduler import PolynomialDecayLR
 from trainer.evaluator import Evaluator
 from trainer.result_tracker import Result_Tracker
 from utils.loss import DistributedNCELoss
 from utils.function import set_random_seed, load_config
 from models.get_model_pretrain import get_model
 from data.get_loader_pretrain import get_dataset
+from torch.utils.tensorboard import SummaryWriter
+
 import warnings
 warnings.filterwarnings("ignore")
 local_rank = int(os.environ['LOCAL_RANK'])
@@ -30,7 +30,6 @@ def parse_args():
     parser.add_argument("--backbone", type=str, default="light")
     parser.add_argument("--n_threads", type=int, default=8)
     parser.add_argument("--n_devices", type=int, default=1)
-    parser.add_argument("--ff", action='store_true')
     args = parser.parse_args()
     return args
 
@@ -58,11 +57,9 @@ if __name__ == '__main__':
     reg_evaluator = Evaluator("pretrain", reg_metric, train_dataset.d_mds)
     clf_evaluator = Evaluator("pretrain", clf_metric, train_dataset.d_fps)
     result_tracker = Result_Tracker(reg_metric)
-
-    trainer = Trainer(args, optimizer, lr_scheduler, reg_loss_fn, clf_loss_fn, sl_loss_fn, nce_loss_fn, reg_evaluator, clf_evaluator, result_tracker, device=device, local_rank=local_rank)
+    if local_rank == 0:
+        summary_writer = SummaryWriter(f"tensorboard/pretrain-{args.backbone}-{args.config}", )
+    else:
+        summary_writer = None
+    trainer = Trainer(args, optimizer, lr_scheduler, reg_loss_fn, clf_loss_fn, sl_loss_fn, nce_loss_fn, reg_evaluator, clf_evaluator, result_tracker, summary_writer, device=device, local_rank=local_rank)
     trainer.fit(model, train_loader)
-
-
-    
-    
-

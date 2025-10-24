@@ -6,6 +6,7 @@ class Vocab(object):
         self.n_atom_types = n_atom_types
         self.n_bond_types = n_bond_types
         self.vocab = self.construct()
+
     def construct(self):
         vocab = {}
         # bonded Triplets
@@ -29,6 +30,7 @@ class Vocab(object):
         vocab[999][999][999] = id
         self.vocab_size = id
         return vocab
+
     def index(self, atom_type1, atom_type2, bond_type):
         atom_type1, atom_type2 = np.sort([atom_type1, atom_type2])
         try:
@@ -36,8 +38,3 @@ class Vocab(object):
         except Exception as e:
             print(e)
             return self.vocab_size
-    def one_hot_feature_index(self, atom_type_one_hot1, atom_type_one_hot2, bond_type_one_hot):
-        atom_type1, atom_type2 = np.sort([atom_type_one_hot1.index(1),atom_type_one_hot2.index(1)]).tolist()
-        bond_type = bond_type_one_hot.index(1)
-        return self.index([atom_type1, bond_type, atom_type2])
-

@@ -11,7 +11,7 @@ from dgl import function as fn
 from dgl.nn.functional import edge_softmax
 import numpy as np
 
-from data.smiles2g import VIRTUAL_ATOM_FEATURE_PLACEHOLDER, VIRTUAL_BOND_FEATURE_PLACEHOLDER
+from data.constants import VIRTUAL_ATOM_FEATURE_PLACEHOLDER, VIRTUAL_BOND_FEATURE_PLACEHOLDER
 
 
 def init_params(module):

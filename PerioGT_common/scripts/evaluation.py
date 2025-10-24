@@ -21,7 +21,7 @@ def parse_args():
     parser.add_argument("--config", type=str, required=True)
     parser.add_argument("--backbone", type=str, default="light")
     parser.add_argument("--model_path", type=str, required=True)
-    parser.add_argument("--max_prompt", type=int, default=20)
+    parser.add_argument("--max_prompt", type=int, default=10)
     parser.add_argument("--dataset", type=str, required=True)
 
     parser.add_argument("--dropout", type=float, default=0.)

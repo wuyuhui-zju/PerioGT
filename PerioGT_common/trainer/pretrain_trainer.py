@@ -1,8 +1,10 @@
 import torch
+import numpy as np
+from sklearn.metrics import f1_score
 
 
 class Trainer():
-    def __init__(self, args, optimizer, lr_scheduler, reg_loss_fn, clf_loss_fn, sl_loss_fn, nce_loss_fn, reg_evaluator, clf_evaluator, result_tracker, device, ddp=False, local_rank=1):
+    def __init__(self, args, optimizer, lr_scheduler, reg_loss_fn, clf_loss_fn, sl_loss_fn, nce_loss_fn, reg_evaluator, clf_evaluator, result_tracker, summary_writer, device, ddp=False, local_rank=1):
         self.args = args
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
@@ -13,6 +15,7 @@ class Trainer():
         self.reg_evaluator = reg_evaluator
         self.clf_evaluator = clf_evaluator
         self.result_tracker = result_tracker
+        self.summary_writer = summary_writer
         self.device = device
         self.ddp = ddp
         self.local_rank = local_rank
@@ -39,8 +42,8 @@ class Trainer():
                 sl_loss = self.sl_loss_fn(sl_predictions, sl_labels).mean()  # reconstruction loss of PNs
                 fp_loss = self.clf_loss_fn(fp_predictions, fps).mean()  # reconstruction loss of binary features in VNs
                 md_loss = self.reg_loss_fn(md_predictions, mds).mean()  # reconstruction loss of numerical features in VNs
-                cl_loss = self.nce_loss_fn(cl_projections, temperature=0.2, dist=True)  # PA-based contrastive learning loss
-                loss = ((sl_loss + fp_loss + md_loss)/3) + cl_loss
+                cl_loss = self.nce_loss_fn(cl_projections, temperature=0.2, dist=True)  # PA-based contrastive loss
+                loss = ((sl_loss + fp_loss + md_loss) / 3) + cl_loss
 
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
@@ -48,6 +51,30 @@ class Trainer():
                 print(f"n_step: {self.n_updates}")
                 self.n_updates += 1
                 self.lr_scheduler.step()
+                if self.summary_writer is not None:
+                    loss_mask = self.sl_loss_fn(sl_predictions.detach().cpu()[mask_replace_keep==1],sl_labels.detach().cpu()[mask_replace_keep==1]).mean()
+                    loss_replace = self.sl_loss_fn(sl_predictions.detach().cpu()[mask_replace_keep==2],sl_labels.detach().cpu()[mask_replace_keep==2]).mean()
+                    loss_keep = self.sl_loss_fn(sl_predictions.detach().cpu()[mask_replace_keep==3],sl_labels.detach().cpu()[mask_replace_keep==3]).mean()
+                    preds = np.argmax(sl_predictions.detach().cpu().numpy(), axis=-1)
+                    labels = sl_labels.detach().cpu().numpy()
+                    self.summary_writer.add_scalar('Loss/loss_tot', loss.item(), self.n_updates)
+                    self.summary_writer.add_scalar('Loss/loss_bert', sl_loss.item(), self.n_updates)
+                    self.summary_writer.add_scalar('Loss/loss_mask', loss_mask.item(), self.n_updates)
+                    self.summary_writer.add_scalar('Loss/loss_replace', loss_replace.item(), self.n_updates)
+                    self.summary_writer.add_scalar('Loss/loss_keep', loss_keep.item(), self.n_updates)
+                    self.summary_writer.add_scalar('Loss/loss_clf', fp_loss.item(), self.n_updates)
+                    self.summary_writer.add_scalar('Loss/loss_reg', md_loss.item(), self.n_updates)
+                    self.summary_writer.add_scalar('Loss/loss_cl', cl_loss.item(), self.n_updates)
+
+                    self.summary_writer.add_scalar('F1_micro/all', f1_score(preds, labels, average='micro'), self.n_updates)
+                    self.summary_writer.add_scalar('F1_macro/all', f1_score(preds, labels, average='macro'), self.n_updates)
+                    self.summary_writer.add_scalar('F1_micro/mask', f1_score(preds[mask_replace_keep==1], labels[mask_replace_keep==1], average='micro'), self.n_updates)
+                    self.summary_writer.add_scalar('F1_macro/mask', f1_score(preds[mask_replace_keep==1], labels[mask_replace_keep==1], average='macro'), self.n_updates)
+                    self.summary_writer.add_scalar('F1_micro/replace', f1_score(preds[mask_replace_keep==2], labels[mask_replace_keep==2], average='micro'), self.n_updates)
+                    self.summary_writer.add_scalar('F1_macro/replace', f1_score(preds[mask_replace_keep==2], labels[mask_replace_keep==2], average='macro'), self.n_updates)
+                    self.summary_writer.add_scalar('F1_micro/keep', f1_score(preds[mask_replace_keep==3], labels[mask_replace_keep==3], average='micro'), self.n_updates)
+                    self.summary_writer.add_scalar('F1_macro/keep', f1_score(preds[mask_replace_keep==3], labels[mask_replace_keep==3], average='macro'), self.n_updates)
+                    self.summary_writer.add_scalar(f'Clf/{self.clf_evaluator.eval_metric}_all', np.mean(self.clf_evaluator.eval(fps, fp_predictions)), self.n_updates)
 
                 if self.n_updates == self.args.n_steps:
                     if self.local_rank == 0:
@@ -70,5 +97,3 @@ class Trainer():
 
     def save_model(self, model):
         torch.save(model.state_dict(), self.args.save_path+f"/{self.args.config}.pth")
-
-    

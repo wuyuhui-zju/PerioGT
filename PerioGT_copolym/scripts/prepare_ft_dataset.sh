@@ -8,4 +8,5 @@ python prepare_ft_dataset.py \
     --device cuda \
     --config $CONFIG \
     --model_path ../checkpoints/pretrained/light/$CONFIG.pth \
+    --max_prompt 5 \
     --data_path ../datasets

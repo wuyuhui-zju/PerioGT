@@ -11,7 +11,7 @@ import numpy as np
 from typing import Optional, Tuple
 from torch import Tensor
 
-from data.smiles2g_light import VIRTUAL_ATOM_FEATURE_PLACEHOLDER, VIRTUAL_BOND_FEATURE_PLACEHOLDER
+from data.constants import VIRTUAL_ATOM_FEATURE_PLACEHOLDER, VIRTUAL_BOND_FEATURE_PLACEHOLDER
 
 
 def to_dense_batch(

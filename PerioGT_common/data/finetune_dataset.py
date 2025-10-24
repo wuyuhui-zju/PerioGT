@@ -12,17 +12,23 @@ SPLIT_TO_ID = {'train': 0, 'val': 1, 'test': 2}
 
 
 class PolymDataset(Dataset):
-    def __init__(self, dataset, split, root_path="../datasets"):
+    def __init__(self, dataset, split, root_path="../datasets", mode="finetune"):
         dataset_path = os.path.join(root_path, f"{dataset}/{dataset}.csv")
-        self.cache_path = os.path.join(root_path, f"{dataset}/graphs.pkl")
+        if mode == 'finetune':
+            self.cache_path = os.path.join(root_path, f"{dataset}/graphs.pkl")
+        elif mode == 'feature':
+            self.cache_path = os.path.join(root_path, f"{dataset}/graphs_feat.pkl")
         split_path = os.path.join(root_path, f"{dataset}/split.pkl")
         ecfp_path = os.path.join(root_path, f"{dataset}/maccs_ecfp.npz")
         md_path = os.path.join(root_path, f"{dataset}/polymer_descriptors.npz")
         # Load Data
         df = pd.read_csv(dataset_path)
-        with open(split_path, 'rb') as f:
-            split_idx = pickle.load(f)
-        use_idxs = split_idx[SPLIT_TO_ID[split]]
+        if split is not None:
+            with open(split_path, 'rb') as f:
+                split_idx = pickle.load(f)
+            use_idxs = split_idx[SPLIT_TO_ID[split]]
+        else:
+            use_idxs = np.arange(0, len(df))
 
         fps = torch.from_numpy(sps.load_npz(ecfp_path).todense().astype(np.float32))
         mds = np.load(md_path)['md'].astype(np.float32)

@@ -56,9 +56,7 @@ class Trainer():
                 val_result = self.eval(model, val_loader)
                 test_result = self.eval(model, test_loader)
                 train_result = self.eval(model, train_loader)
-                print(f"Epoch: {epoch}\ttrain: {train_result}\tval: {val_result}")
                 if self.result_tracker.update(np.mean(best_val_result), np.mean(val_result)):
-                    print("saved!")
                     best_val_result = val_result
                     best_test_result = test_result
                     best_train_result = train_result
