@@ -34,7 +34,7 @@ conda activate PerioGT
 > *Note: Make sure you have [Anaconda](https://www.anaconda.com/products/distribution) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html) installed before running the above commands.*
 
 ## Project Structure
-The major folders and their functions in MatMCL are organized as follows:
+The major folders and their functions in PerioGT are organized as follows:
 ```
 ├── PerioGT_common/          # Core implementation (including pretraining)
 │   ├── checkpoints/         # Pretrained and finetuned model weights
