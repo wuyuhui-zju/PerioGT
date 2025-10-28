@@ -146,7 +146,7 @@ CUDA_VISIBLE_DEVICES=0,1,2 python -u -m torch.distributed.run \
     --nproc_per_node=3 \
     --nnodes=1 \
     pretrain.py \
-    --save_path ../models/checkpoints/pretrained/light \
+    --save_path ../checkpoints/pretrained/light \
     --n_threads 8 \
     --n_devices 3 \
     --config base \
