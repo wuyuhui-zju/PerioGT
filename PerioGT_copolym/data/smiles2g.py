@@ -16,7 +16,7 @@ from data.constants import VIRTUAL_PATH_INDICATOR, VIRTUAL_ATOM_FEATURE_PLACEHOL
 from data.vocab import Vocab
 from models.light import LiGhTPredictor as LiGhT
 from utils.aug import generate_multimer_smiles, periodicity_augment_traverse
-from utils.function import load_config, SafeSubstructureMatcher
+from utils.function import load_config, SafeSubstructureMatcher, preprocess_batch_light
 
 d_atom_feats = 138
 d_bond_feats = 14
@@ -267,7 +267,9 @@ class PolyGraphBuilderCopolym:
         # normalization
         des_norm = self.scaler.transform(des).astype(np.float32)
 
-        graphs = dgl.batch(graphs).to(self.device)
+        graphs = dgl.batch(graphs)
+        graphs.edata['path'][:, :] = preprocess_batch_light(graphs.batch_num_nodes(), graphs.batch_num_edges(), graphs.edata['path'][:, :])
+        graphs = graphs.to(self.device)
         fps = torch.from_numpy(fp_list).to(self.device)
         mds = torch.from_numpy(des_norm).to(self.device)
 
