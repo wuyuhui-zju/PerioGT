@@ -2,9 +2,9 @@
 ![license](https://img.shields.io/badge/license-MIT-green)
 ![version](https://img.shields.io/badge/version-1.0-yellow)
 ![zenodo](https://img.shields.io/badge/zenodo-10.5281/zenodo.12705753-red)
-![DOI](https://img.shields.io/badge/DOI-purple)
+![DOI](https://img.shields.io/badge/DOI-10.1038/s43588--025--00903--9-purple)
 # Periodicity-aware deep learning for polymers
-This is the official implementation of PerioGT, which is proposed in the article: Periodicity-aware deep learning for polymers.
+This is the official implementation of PerioGT, which is proposed in the article: [Periodicity-aware deep learning for polymers](https://www.nature.com/articles/s43588-025-00903-9).
 
 ## Table of Contents
 - [Overview](#dart-overview)
@@ -29,7 +29,9 @@ PerioGT consists of three coponents:
 1. **PolymerGraph construction.** Polymers have a complex multilevel structure, and the chemical structure of RUs alone is not sufficient to represent its structure. We provide a flexible mechanism that can adapt to more complex cases.
 2. **Periodicity-aware pretraining.** We construct a chemical knowledge-driven sampling module as a periodicity prior and incorporate it into the model through contrastive learning.
 3. **Periodicity prompt-guided finetuning.** We provide an option that aggregates the equivalent motifs in different RUs as a prompt in finetuning to emphasize the periodic structure of polymers.
-
+<div align="center">
+  <img src="image/overview.png" alt="Overview" />
+</div>
 
 ## :computer: System Requirements
 This project has been tested under the following system:
