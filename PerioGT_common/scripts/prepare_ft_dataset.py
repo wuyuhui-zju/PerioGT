@@ -43,10 +43,7 @@ if __name__ == '__main__':
         scaler = pickle.load(file)
 
     print('Precomputing features')
-    if args.use_prompt:
-        feat_cache = precompute_features(smiless, units=(3, 6, 9), workers=args.n_jobs)
-    else:
-        feat_cache = precompute_features(smiless, units=(3,), workers=args.n_jobs)
+    feat_cache = precompute_features(smiless, units=(3,), workers=args.n_jobs)
 
     print('Constructing graphs')
     if args.backbone == "light":

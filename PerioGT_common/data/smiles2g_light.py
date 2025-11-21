@@ -391,7 +391,7 @@ class PolyGraphBuilderFinetune:
         processed_smiless = []
         processed_smiless_nmrus = []
         for smiles in smiless:
-            for i in range(1, 4):
+            for i in range(1, 2):
                 processed_smiless.append(generate_multimer_smiles(num_repeat_units=i, smiles=smiles, replace_dummy_atoms=False))
                 processed_smiless_nmrus.append(i)
 
