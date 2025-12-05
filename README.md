@@ -142,7 +142,7 @@ To extract features from the provided example dataset, run:
 ```
 bash extract_features_example.sh
 ```
-This will generate an output file `features.npy`, containing per-polymer embeddings in NumPy format.
+This will generate an output file `features.npz`, containing per-polymer embeddings in NumPy format.
 If you are using your own dataset, open and modify `extract_features_example.sh`, replacing `eps` with the name of your dataset.
 
 

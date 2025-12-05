@@ -46,6 +46,7 @@ def extract_features(args):
 
     print("Saving features")
     np.savez_compressed(f"{args.data_path}/{args.dataset}/features.npz", fps=np.array(feat_list))
+    print(f"Feature embeddings have been saved to {args.data_path}/{args.dataset}/features.npz.")
 
 
 if __name__ == '__main__':
