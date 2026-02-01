@@ -24,6 +24,7 @@ This is the official implementation of PerioGT, which is proposed in the article
 - [Citation](#clipboard-citation)
 
 ## :bell: News
+- `2026.01.21` Our paper *"Iterative discovery of potent polymeric antibiotics via multi-stage and multi-task learning against antimicrobial resistance"*, built upon PerioGT, has been published in [*Nature Communications*](https://www.nature.com/articles/s41467-026-68682-z).
 - `2025.12.01` **PerioGT 2.0** is under development, including (1) a topology-aware foundation model and (2) a distilled lightweight model designed for efficient deployment. Coming soon.
 - `2025.11.20` Our paper *"Periodicity-aware deep learning for polymers"* has been published in [*Nature Computational Science*](https://www.nature.com/articles/s43588-025-00903-9). 
 
@@ -253,7 +254,8 @@ If this work is helpful for your research, please cite our paper.
   title={Periodicity-aware deep learning for polymers},
   author={Wu, Yuhui and Wang, Cong and Shen, Xintian and Zhang, Tianyi and Zhang, Peng and Ji, Jian},
   journal={Nature Computational Science},
-  pages={1--13},
+  volume={5},
+  pages={1214--1226},
   year={2025},
   publisher={Nature Publishing Group US New York}
 }
